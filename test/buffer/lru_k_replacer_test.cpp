@@ -162,5 +162,4 @@ TEST(LRUKReplacerTest, SecondSimpleTest) {
   ASSERT_EQ(3, frame_id);
 }
 
-
 }  // namespace bustub

@@ -40,10 +40,7 @@ auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
   size_t max_distance = 0;
   frame_id_t frame_to_evict = INVALID_FRAME_ID;
 
-  for (const auto &[fst, snd] : node_store_) {
-    const frame_id_t frame_id = fst;
-    LRUKNode frame_info = snd;
-
+  for (const auto &[frame_id, frame_info] : node_store_) {
     if (!frame_info.is_evictable_) {
       continue;
     }
@@ -58,7 +55,9 @@ auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
     }
 
     if (distance > max_distance ||
-        (distance == max_distance && frame_info.history_.front() < node_store_[frame_to_evict].history_.front())) {
+        (distance == max_distance && frame_info.history_.front() < node_store_[frame_to_evict].history_.front()) ||
+        (distance == max_distance && frame_info.history_.front() == node_store_[frame_to_evict].history_.front() &&
+         frame_info.access_type_ < node_store_[frame_to_evict].access_type_)) {
       max_distance = distance;
       frame_to_evict = frame_id;
     }
@@ -84,7 +83,7 @@ auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
  * @param access_type type of access that was received. This parameter is only needed for
  * leaderboard tests.
  */
-void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {
+void LRUKReplacer::RecordAccess(frame_id_t frame_id, AccessType access_type) {
   if (frame_id > static_cast<frame_id_t>(replacer_size_)) {
     BUSTUB_ASSERT(false, "frame id is invalid (larger than replacer_size_)");
   }
@@ -105,6 +104,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
     curr_size_++;
   }
 
+  node.access_type_ = access_type;
   // std::cout<<"frame: "<< frame_id << " curr_size: "<< curr_size_<<std::endl;
 }
 
@@ -173,8 +173,6 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
  *
  * @return size_t
  */
-auto LRUKReplacer::Size() -> size_t {
-  return curr_size_;
-}
+auto LRUKReplacer::Size() -> size_t { return curr_size_; }
 
 }  // namespace bustub

@@ -35,6 +35,8 @@ class LRUKNode {
   size_t k_;
   frame_id_t fid_;
   bool is_evictable_{false};
+
+  AccessType access_type_{AccessType::Unknown};
 };
 
 /**
