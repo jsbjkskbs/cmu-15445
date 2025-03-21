@@ -70,8 +70,8 @@ DiskExtendibleHashTable<K, V, KC>::DiskExtendibleHashTable(const std::string &na
  * @return the value(s) associated with the given key
  */
 template <typename K, typename V, typename KC>
-auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *result, Transaction *transaction) const
-    -> bool {
+auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *result,
+                                                 Transaction *transaction) const -> bool {
   return false;
 }
 

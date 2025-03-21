@@ -116,8 +116,8 @@ class BufferPoolManager {
   auto Size() const -> size_t;
   auto NewPage() -> page_id_t;
   auto DeletePage(page_id_t page_id) -> bool;
-  auto CheckedWritePage(page_id_t page_id, AccessType access_type = AccessType::Unknown)
-      -> std::optional<WritePageGuard>;
+  auto CheckedWritePage(page_id_t page_id,
+                        AccessType access_type = AccessType::Unknown) -> std::optional<WritePageGuard>;
   auto CheckedReadPage(page_id_t page_id, AccessType access_type = AccessType::Unknown) -> std::optional<ReadPageGuard>;
   auto WritePage(page_id_t page_id, AccessType access_type = AccessType::Unknown) -> WritePageGuard;
   auto ReadPage(page_id_t page_id, AccessType access_type = AccessType::Unknown) -> ReadPageGuard;

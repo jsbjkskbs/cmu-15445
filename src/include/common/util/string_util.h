@@ -83,8 +83,8 @@ class StringUtil {
 
   static auto Replace(std::string source, const std::string &from, const std::string &to) -> std::string;
 
-  static auto IndentAllLines(const std::string &lines, size_t num_indent, bool except_first_line = false)
-      -> std::string;
+  static auto IndentAllLines(const std::string &lines, size_t num_indent,
+                             bool except_first_line = false) -> std::string;
 };
 
 }  // namespace bustub

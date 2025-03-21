@@ -108,7 +108,7 @@ auto UpdateTupleAndUndoLink(
 /**
  * @brief Get the tuple and its undo link in the table heap atomically.
  */
-auto GetTupleAndUndoLink(TransactionManager *txn_mgr, TableHeap *table_heap, RID rid)
-    -> std::tuple<TupleMeta, Tuple, std::optional<UndoLink>>;
+auto GetTupleAndUndoLink(TransactionManager *txn_mgr, TableHeap *table_heap,
+                         RID rid) -> std::tuple<TupleMeta, Tuple, std::optional<UndoLink>>;
 
 }  // namespace bustub

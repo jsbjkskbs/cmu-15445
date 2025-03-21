@@ -116,8 +116,8 @@ auto Planner::GetBinaryExpressionFromFactory(const std::string &op_name, Abstrac
   throw Exception(fmt::format("binary op {} not supported in planner yet", op_name));
 }
 
-auto Planner::PlanFuncCall(const BoundFuncCall &expr, const std::vector<AbstractPlanNodeRef> &children)
-    -> AbstractExpressionRef {
+auto Planner::PlanFuncCall(const BoundFuncCall &expr,
+                           const std::vector<AbstractPlanNodeRef> &children) -> AbstractExpressionRef {
   std::vector<AbstractExpressionRef> args;
   for (const auto &arg : expr.args_) {
     auto [_1, arg_expr] = PlanExpression(*arg, children);

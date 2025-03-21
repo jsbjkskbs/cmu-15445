@@ -245,8 +245,8 @@ class BusTubInstance {
 
   ~BusTubInstance();
 
-  auto ExecuteSql(const std::string &sql, ResultWriter &writer, std::shared_ptr<CheckOptions> check_options = nullptr)
-      -> bool;
+  auto ExecuteSql(const std::string &sql, ResultWriter &writer,
+                  std::shared_ptr<CheckOptions> check_options = nullptr) -> bool;
 
   auto ExecuteSqlTxn(const std::string &sql, ResultWriter &writer, Transaction *txn,
                      std::shared_ptr<CheckOptions> check_options = nullptr) -> bool;

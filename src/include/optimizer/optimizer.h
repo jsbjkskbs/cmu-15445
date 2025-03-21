@@ -51,8 +51,8 @@ class Optimizer {
 
   auto OptimizeMergeFilterScan(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;
 
-  auto RewriteExpressionForJoin(const AbstractExpressionRef &expr, size_t left_column_cnt, size_t right_column_cnt)
-      -> AbstractExpressionRef;
+  auto RewriteExpressionForJoin(const AbstractExpressionRef &expr, size_t left_column_cnt,
+                                size_t right_column_cnt) -> AbstractExpressionRef;
 
   auto IsPredicateTrue(const AbstractExpressionRef &expr) -> bool;
 
@@ -60,8 +60,8 @@ class Optimizer {
 
   auto OptimizeSeqScanAsIndexScan(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;
 
-  auto MatchIndex(const std::string &table_name, uint32_t index_key_idx)
-      -> std::optional<std::tuple<index_oid_t, std::string>>;
+  auto MatchIndex(const std::string &table_name,
+                  uint32_t index_key_idx) -> std::optional<std::tuple<index_oid_t, std::string>>;
 
   auto OptimizeColumnPruning(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;
 

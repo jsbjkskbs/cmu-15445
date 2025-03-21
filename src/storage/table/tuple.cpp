@@ -88,8 +88,8 @@ auto Tuple::GetValue(const Schema *schema, const uint32_t column_idx) const -> V
 /**
  * Generates a key tuple given schemas and attributes
  */
-auto Tuple::KeyFromTuple(const Schema &schema, const Schema &key_schema, const std::vector<uint32_t> &key_attrs) const
-    -> Tuple {
+auto Tuple::KeyFromTuple(const Schema &schema, const Schema &key_schema,
+                         const std::vector<uint32_t> &key_attrs) const -> Tuple {
   std::vector<Value> values;
   values.reserve(key_attrs.size());
   for (auto idx : key_attrs) {

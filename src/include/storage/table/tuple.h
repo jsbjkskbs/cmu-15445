@@ -95,8 +95,8 @@ class Tuple {
 
   auto GetValue(const Schema *schema, uint32_t column_idx) const -> Value;
 
-  auto KeyFromTuple(const Schema &schema, const Schema &key_schema, const std::vector<uint32_t> &key_attrs) const
-      -> Tuple;
+  auto KeyFromTuple(const Schema &schema, const Schema &key_schema,
+                    const std::vector<uint32_t> &key_attrs) const -> Tuple;
 
   // Is the column value null ?
   inline auto IsNull(const Schema *schema, uint32_t column_idx) const -> bool {

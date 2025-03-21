@@ -23,7 +23,7 @@ namespace bustub {
  */
 class ExecutorFactory {
  public:
-  static auto CreateExecutor(ExecutorContext *exec_ctx, const AbstractPlanNodeRef &plan)
-      -> std::unique_ptr<AbstractExecutor>;
+  static auto CreateExecutor(ExecutorContext *exec_ctx,
+                             const AbstractPlanNodeRef &plan) -> std::unique_ptr<AbstractExecutor>;
 };
 }  // namespace bustub
