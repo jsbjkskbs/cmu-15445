@@ -21,13 +21,42 @@
 
 #include "common/config.h"
 #include "common/macros.h"
+#include "fmt/printf.h"
+
+#include <iostream>
+#include <memory>
 
 namespace bustub {
 
 enum class AccessType { Unknown = 0, Lookup, Scan, Index };
 
+// #define DEBUG_FOR_LRUK
+
 class LRUKNode {
  public:
+  void UpdateLastKTimestamp() {
+    if (history_.size() >= k_) {
+      auto it = history_.rbegin();
+      std::advance(it, k_ - 1);
+      last_k_timestamp = *it;
+    } else {
+      last_k_timestamp = history_.front();
+    }
+#ifdef DEBUG_FOR_LRUK
+      fmt::println("[DEBUG] fid: {}, k: {}, last_k_timestamp: {}", fid_, k_, last_k_timestamp);
+#endif
+  }
+
+  void PrintTimestamp() {
+#ifdef DEBUG_FOR_LRUK
+    fmt::print("fid: {}, ts: [", fid_);
+    for (auto ts : history_) {
+      fmt::print("{} ", ts);
+    }
+    fmt::println("]");
+#endif
+  }
+
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
 
@@ -36,6 +65,7 @@ class LRUKNode {
   frame_id_t fid_;
   bool is_evictable_{false};
 
+  size_t last_k_timestamp{0};
   AccessType access_type_{AccessType::Unknown};
 };
 
@@ -61,7 +91,7 @@ class LRUKReplacer {
    */
   ~LRUKReplacer() {
     std::lock_guard guard(latch_);
-    node_store_.clear();
+    // node_store_.clear();
   }
 
   auto Evict() -> std::optional<frame_id_t>;
@@ -74,14 +104,45 @@ class LRUKReplacer {
 
   auto Size() -> size_t;
 
+  void InsertGENode(const std::shared_ptr<LRUKNode> &node);
+
+  void PrintFrames() const {
+#ifdef DEBUG_FOR_LRUK
+    fmt::println("Less Than K List:");
+    for (const auto &fid : less_than_k_list_) {
+      if (less_than_k_map_.count(fid->fid_) == 0) {
+        fmt::println("{} missing in less than K map\n", fid->fid_);
+        return;
+      }
+      std::cout << fid->fid_ << (fid->is_evictable_ ? " " : "! ");
+    }
+
+    fmt::println("\nGreater Equal K List:");
+    for (const auto &fid : greater_equal_k_list_) {
+      if (greater_equal_k_map_.count(fid->fid_) == 0) {
+        fmt::println("{} missing greater than K map\n", fid->fid_);
+        return;
+      }
+      std::cout << fid->fid_ << (fid->is_evictable_ ? " " : "! ");
+    }
+    fmt::println("\n");
+#endif
+  }
+
  private:
   // Remove maybe_unused if you start using them.
-  std::unordered_map<frame_id_t, LRUKNode> node_store_;
+  // std::unordered_map<frame_id_t, LRUKNode> node_store_;
   size_t current_timestamp_{0};
   size_t curr_size_{0};
-  [[maybe_unused]] size_t replacer_size_;
+  size_t replacer_size_;
   size_t k_;
   std::mutex latch_;
+
+  std::list<std::shared_ptr<LRUKNode>> less_than_k_list_;
+  std::unordered_map<frame_id_t, std::shared_ptr<LRUKNode>> less_than_k_map_;
+
+  std::list<std::shared_ptr<LRUKNode>> greater_equal_k_list_;
+  std::unordered_map<frame_id_t, std::shared_ptr<LRUKNode>> greater_equal_k_map_;
 };
 
 }  // namespace bustub

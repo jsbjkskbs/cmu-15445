@@ -12,6 +12,7 @@
 
 #include "buffer/lru_k_replacer.h"
 #include "common/exception.h"
+#include "fmt/ostream.h"
 
 namespace bustub {
 
@@ -36,40 +37,48 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_fra
  * @return true if a frame is evicted successfully, false if no frames can be evicted.
  */
 auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
-  std::optional<frame_id_t> evicted_frame;
-  size_t max_distance = 0;
-  frame_id_t frame_to_evict = INVALID_FRAME_ID;
+  std::lock_guard guard(latch_);
 
-  for (const auto &[frame_id, frame_info] : node_store_) {
-    if (!frame_info.is_evictable_) {
-      continue;
-    }
+  if (curr_size_ == 0) {
+    return std::nullopt;
+  }
 
-    size_t distance;
-    if (frame_info.history_.size() < k_) {
-      distance = SIZE_MAX;
-    } else {
-      auto it = frame_info.history_.end();
-      std::advance(it, -k_);
-      distance = frame_info.history_.back() - *it;
-    }
-
-    if (distance > max_distance ||
-        (distance == max_distance && frame_info.history_.front() < node_store_[frame_to_evict].history_.front()) ||
-        (distance == max_distance && frame_info.history_.front() == node_store_[frame_to_evict].history_.front() &&
-         frame_info.access_type_ < node_store_[frame_to_evict].access_type_)) {
-      max_distance = distance;
-      frame_to_evict = frame_id;
+  if (!less_than_k_list_.empty()) {
+    auto it = less_than_k_list_.begin();
+    while (it != less_than_k_list_.end()) {
+      const auto &node = *it;
+      if (!node->is_evictable_) {
+        ++it;
+        continue;
+      }
+      less_than_k_map_.erase(node->fid_);
+      less_than_k_list_.erase(it);
+      curr_size_--;
+      // fmt::println("evicted: {}", node->fid_);
+      PrintFrames();
+      return node->fid_;
     }
   }
 
-  if (frame_to_evict != INVALID_FRAME_ID) {
-    evicted_frame = frame_to_evict;
-    node_store_.erase(frame_to_evict);
-    --curr_size_;
+  if (!greater_equal_k_list_.empty()) {
+    auto it = greater_equal_k_list_.begin();
+    while (it != greater_equal_k_list_.end()) {
+      const auto &node = *it;
+      if (!node->is_evictable_) {
+        ++it;
+        continue;
+      }
+      greater_equal_k_map_.erase(node->fid_);
+      greater_equal_k_list_.erase(it);
+      curr_size_--;
+      // fmt::println("evicted: {}", node->fid_);
+      PrintFrames();
+      return node->fid_;
+    }
   }
 
-  return evicted_frame;
+  PrintFrames();
+  return std::nullopt;
 }
 
 /**
@@ -84,28 +93,60 @@ auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
  * leaderboard tests.
  */
 void LRUKReplacer::RecordAccess(frame_id_t frame_id, AccessType access_type) {
-  if (frame_id > static_cast<frame_id_t>(replacer_size_)) {
-    BUSTUB_ASSERT(false, "frame id is invalid (larger than replacer_size_)");
-  }
-
   std::lock_guard guard(latch_);
+
+  if (frame_id >= static_cast<frame_id_t>(replacer_size_) || frame_id < 0) {
+    BUSTUB_ASSERT("frame id {} is invalid (larger than replacer_size_)", frame_id);
+  }
   current_timestamp_++;
 
-  auto &node = node_store_[frame_id];
-  node.history_.push_back(current_timestamp_);
+  const auto ls_it = less_than_k_map_.find(frame_id);
+  const auto ge_it = greater_equal_k_map_.find(frame_id);
+  if (ls_it == less_than_k_map_.end() && ge_it == greater_equal_k_map_.end()) {
+    const auto node = std::make_shared<LRUKNode>();
+    node->fid_ = frame_id;
+    node->k_ = k_;
+    node->history_.push_back(current_timestamp_);
 
-  if (node.history_.size() > k_) {
-    node.history_.pop_front();
+    less_than_k_map_[frame_id] = node;
+    less_than_k_list_.push_back(node);
+  } else {
+    if (ls_it != less_than_k_map_.end()) {
+      const auto node = ls_it->second;
+      node->history_.push_back(current_timestamp_);
+
+      if (node->history_.size() >= k_) {
+        node->UpdateLastKTimestamp();
+        less_than_k_map_.erase(frame_id);
+        less_than_k_list_.remove(node);
+        InsertGENode(node);
+      }
+    } else if (ge_it != greater_equal_k_map_.end()) {
+      const auto node = ge_it->second;
+      node->history_.push_back(current_timestamp_);
+      node->UpdateLastKTimestamp();
+      greater_equal_k_map_.erase(frame_id);
+      greater_equal_k_list_.remove(node);
+      InsertGENode(node);
+    }
   }
-
-  // incr curr_size_ here?
-  if (node.history_.size() == 1) {
-    node.is_evictable_ = true;
-    curr_size_++;
-  }
-
-  node.access_type_ = access_type;
+  // fmt::println("Record Access: {}", frame_id);
+  PrintFrames();
   // std::cout<<"frame: "<< frame_id << " curr_size: "<< curr_size_<<std::endl;
+}
+
+void LRUKReplacer::InsertGENode(const std::shared_ptr<LRUKNode> &node) {
+  node->PrintTimestamp();
+  greater_equal_k_map_[node->fid_] = node;
+  if (greater_equal_k_list_.empty()) {
+    greater_equal_k_list_.push_back(node);
+    return;
+  }
+  auto it = greater_equal_k_list_.begin();
+  while (it != greater_equal_k_list_.end() && node->last_k_timestamp > (*it)->last_k_timestamp) {
+    ++it;
+  }
+  greater_equal_k_list_.insert(it, node);
 }
 
 /**
@@ -124,20 +165,27 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, AccessType access_type) {
  * @param set_evictable whether the given frame is evictable or not
  */
 void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
-  if (frame_id > static_cast<frame_id_t>(replacer_size_)) {
+  if (frame_id > static_cast<frame_id_t>(replacer_size_) || frame_id < 0) {
     BUSTUB_ASSERT(false, "frame id is invalid (larger than replacer_size_)");
   }
 
   std::lock_guard guard(latch_);
 
-  if (auto &node = node_store_[frame_id]; node.is_evictable_ != set_evictable) {
-    node.is_evictable_ = set_evictable;
-    if (set_evictable) {
-      curr_size_++;
-    } else {
-      curr_size_--;
-    }
+  const auto ls_it = less_than_k_map_.find(frame_id);
+  const auto ge_it = greater_equal_k_map_.find(frame_id);
+
+  if (ls_it == less_than_k_map_.end() && ge_it == greater_equal_k_map_.end()) {
+    // throw std::invalid_argument(fmt::format("frame id {} is invalid", frame_id));
+    return;
   }
+
+  const auto node = ls_it != less_than_k_map_.end() ? ls_it->second : ge_it->second;
+  if (node->is_evictable_ && !set_evictable) {
+    curr_size_--;
+  } else if (!node->is_evictable_ && set_evictable) {
+    curr_size_++;
+  }
+  node->is_evictable_ = set_evictable;
 }
 
 /**
@@ -156,16 +204,35 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
  * @param frame_id id of frame to be removed
  */
 void LRUKReplacer::Remove(frame_id_t frame_id) {
+  if (frame_id > static_cast<frame_id_t>(replacer_size_) || frame_id < 0) {
+    BUSTUB_ASSERT(false, "frame id is invalid (larger than replacer_size_)");
+  }
+
   std::lock_guard guard(latch_);
 
-  const auto it = node_store_.find(frame_id);
-  if (it != node_store_.end()) {
-    if (!it->second.is_evictable_) {
-      return;
-    }
-    node_store_.erase(it);
-    curr_size_--;
+  auto ls_it = less_than_k_map_.find(frame_id);
+  auto ge_it = greater_equal_k_map_.find(frame_id);
+  if (ls_it == less_than_k_map_.end() && ge_it == greater_equal_k_map_.end()) {
+    return;
   }
+
+  if (ls_it != less_than_k_map_.end()) {
+    const auto node = less_than_k_map_[frame_id];
+    if (!node->is_evictable_) {
+      throw std::logic_error(fmt::format("frame id {} is not evictable", frame_id));
+    }
+    less_than_k_map_.erase(ls_it);
+    less_than_k_list_.remove(node);
+  } else if (ge_it != greater_equal_k_map_.end()) {
+    const auto node = greater_equal_k_map_[frame_id];
+    if (!node->is_evictable_) {
+      throw std::logic_error(fmt::format("frame id {} is not evictable", frame_id));
+    }
+    greater_equal_k_map_.erase(ge_it);
+    greater_equal_k_list_.remove(node);
+  }
+
+  curr_size_--;
 }
 
 /**
@@ -173,6 +240,9 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
  *
  * @return size_t
  */
-auto LRUKReplacer::Size() -> size_t { return curr_size_; }
+auto LRUKReplacer::Size() -> size_t {
+  std::lock_guard guard(latch_);
+  return curr_size_;
+}
 
 }  // namespace bustub
