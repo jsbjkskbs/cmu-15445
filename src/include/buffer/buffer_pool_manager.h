@@ -89,12 +89,17 @@ class FrameHeader {
   std::vector<char> data_;
 
   /**
-   * TODO(P1): You may add any fields or helper functions under here that you think are necessary.
-   *
    * One potential optimization you could make is storing an optional page ID of the page that the `FrameHeader` is
    * currently storing. This might allow you to skip searching for the corresponding (page ID, frame ID) pair somewhere
    * else in the buffer pool manager...
    */
+  page_id_t page_id_;
+
+  std::mutex mut_;
+  std::condition_variable cv_;
+  bool finished_{false};
+
+  bool is_empty_header_{true};
 };
 
 /**
@@ -126,6 +131,13 @@ class BufferPoolManager {
   void FlushAllPagesUnsafe();
   void FlushAllPages();
   auto GetPinCount(page_id_t page_id) -> std::optional<size_t>;
+
+  auto GetFreeFrameId() -> frame_id_t;
+  auto GetAvailableFrameId() -> frame_id_t;
+
+  auto LoadOrStorePage(page_id_t page_id, AccessType access_type = AccessType::Unknown) -> std::shared_ptr<FrameHeader>;
+
+  auto page_table() -> std::unordered_map<page_id_t, frame_id_t> { return page_table_; }
 
  private:
   /** @brief The number of frames in the buffer pool. */

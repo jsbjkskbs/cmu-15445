@@ -43,7 +43,7 @@ class LRUKNode {
       last_k_timestamp = history_.front();
     }
 #ifdef DEBUG_FOR_LRUK
-      fmt::println("[DEBUG] fid: {}, k: {}, last_k_timestamp: {}", fid_, k_, last_k_timestamp);
+    fmt::println("[DEBUG] fid: {}, k: {}, last_k_timestamp: {}", fid_, k_, last_k_timestamp);
 #endif
   }
 

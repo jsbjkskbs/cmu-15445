@@ -12,6 +12,7 @@
 
 #include "storage/disk/disk_scheduler.h"
 #include "common/exception.h"
+#include "fmt/base.h"
 #include "storage/disk/disk_manager.h"
 
 namespace bustub {
@@ -42,17 +43,20 @@ void DiskScheduler::Schedule(DiskRequest r) { request_queue_.Put(std::move(r)); 
  * return until ~DiskScheduler() is called. At that point you need to make sure that the function does return.
  */
 void DiskScheduler::StartWorkerThread() {
-  while (true) {
-    auto req = request_queue_.Get();
-    if (!req.has_value()) {
-      return;
+  std::optional<DiskRequest> request;
+
+  while ((request = request_queue_.Get()) != std::nullopt) {
+    if (request->cond_.has_value()) {
+      request->cond_.value().get();
     }
-    if (req->is_write_) {
-      disk_manager_->WritePage(req->page_id_, req->data_);
+    if (request->is_write_) {
+      // fmt::println("write data, page_id: {}, data: {}", request->page_id_, request->data_);
+      disk_manager_->WritePage(request->page_id_, request->data_);
     } else {
-      disk_manager_->ReadPage(req->page_id_, req->data_);
+      // fmt::println("read data, page_id: {}, data: {}", request->page_id_, request->data_);
+      disk_manager_->ReadPage(request->page_id_, request->data_);
     }
-    req->callback_.set_value(true);
+    request->callback_.set_value(true);
   }
 }
 
